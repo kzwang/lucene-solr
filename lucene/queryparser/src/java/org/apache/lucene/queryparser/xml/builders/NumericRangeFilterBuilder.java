@@ -21,6 +21,8 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.NumericRangeFilter;
+import org.apache.lucene.search.NumericRangeQuery;
+import org.apache.lucene.util.BigNumericUtils;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.queryparser.xml.DOMUtils;
@@ -29,6 +31,7 @@ import org.apache.lucene.queryparser.xml.ParserException;
 import org.w3c.dom.Element;
 
 import java.io.IOException;
+import java.math.BigInteger;
 
 /**
  * Creates a {@link NumericRangeFilter}. The table below specifies the required
@@ -140,8 +143,13 @@ public class NumericRangeFilterBuilder implements FilterBuilder {
         filter = NumericRangeFilter.newFloatRange(field, precisionStep, Float
             .valueOf(lowerTerm), Float.valueOf(upperTerm), lowerInclusive,
             upperInclusive);
+      } else if (type.equalsIgnoreCase("big_integer")) {
+          int valueSize = DOMUtils.getAttribute(e, "valueSize", BigNumericUtils.VALUE_SIZE_DEFAULT);
+          filter = NumericRangeFilter.newBigIntegerRange(field, precisionStep, new BigInteger(lowerTerm),
+              new BigInteger(upperTerm), lowerInclusive,
+              upperInclusive, valueSize);
       } else {
-        throw new ParserException("type attribute must be one of: [long, int, double, float]");
+        throw new ParserException("type attribute must be one of: [long, int, double, float, big_integer]");
       }
       return filter;
     } catch (NumberFormatException nfe) {

@@ -18,6 +18,7 @@ package org.apache.lucene.index;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DocumentStoredFieldVisitor;
@@ -71,6 +72,10 @@ public abstract class StoredFieldVisitor {
 
   /** Process a double numeric field. */
   public void doubleField(FieldInfo fieldInfo, double value) throws IOException {
+  }
+
+  /** Process a BigInteger numeric field. */
+  public void bigIntegerField(FieldInfo fieldInfo, BigInteger value) throws IOException {
   }
   
   /**

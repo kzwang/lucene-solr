@@ -18,6 +18,7 @@ package org.apache.lucene.codecs.simpletext;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.lucene.codecs.StoredFieldsReader;
@@ -125,6 +126,8 @@ public class SimpleTextStoredFieldsReader extends StoredFieldsReader {
         type = TYPE_FLOAT;
       } else if (equalsAt(TYPE_DOUBLE, scratch, TYPE.length)) {
         type = TYPE_DOUBLE;
+      } else if (equalsAt(TYPE_BIG_INTEGER, scratch, TYPE.length)) {
+        type = TYPE_BIG_INTEGER;
       } else {
         throw new RuntimeException("unknown field type");
       }
@@ -163,6 +166,9 @@ public class SimpleTextStoredFieldsReader extends StoredFieldsReader {
     } else if (type == TYPE_DOUBLE) {
       UnicodeUtil.UTF8toUTF16(scratch.bytes, scratch.offset+VALUE.length, scratch.length-VALUE.length, scratchUTF16);
       visitor.doubleField(fieldInfo, Double.parseDouble(scratchUTF16.toString()));
+    } else if (type == TYPE_BIG_INTEGER) {
+      UnicodeUtil.UTF8toUTF16(scratch.bytes, scratch.offset+VALUE.length, scratch.length-VALUE.length, scratchUTF16);
+      visitor.bigIntegerField(fieldInfo, new BigInteger(scratchUTF16.toString()));
     }
   }
 

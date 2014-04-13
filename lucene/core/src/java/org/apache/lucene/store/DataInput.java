@@ -18,6 +18,7 @@ package org.apache.lucene.store;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -266,6 +267,18 @@ public abstract class DataInput implements Cloneable {
       readBytes(skipBuffer, 0, step, false);
       skipped += step;
     }
+  }
+
+  /**
+   * todo: javadoc
+   * @return
+   * @throws IOException
+   */
+  public BigInteger readBigInteger() throws IOException {
+    int length = readVInt();
+    final byte[] bytes = new byte[length];
+    readBytes(bytes, 0, length);
+    return new BigInteger(bytes);
   }
 
 }

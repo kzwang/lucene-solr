@@ -18,6 +18,7 @@ package org.apache.lucene.index;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.StoredFieldsFormat;
 import org.apache.lucene.codecs.lucene46.Lucene46Codec;
 import org.apache.lucene.codecs.simpletext.SimpleTextCodec;
+import org.apache.lucene.document.BigIntegerField;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DoubleField;
 import org.apache.lucene.document.Field;
@@ -267,19 +269,28 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
           typeAnswer = NumericType.DOUBLE;
         }
       } else {
-        // int/long
+        // biginteger/int/long
         if (random().nextBoolean()) {
-          final int i = random().nextInt();
-          answer = Integer.valueOf(i);
-          nf = new IntField("nf", i, Field.Store.NO);
-          sf = new StoredField("nf", i);
-          typeAnswer = NumericType.INT;
-        } else {
           final long l = random().nextLong();
-          answer = Long.valueOf(l);
-          nf = new LongField("nf", l, Field.Store.NO);
-          sf = new StoredField("nf", l);
-          typeAnswer = NumericType.LONG;
+          answer = BigInteger.valueOf(l);
+          nf = new BigIntegerField("nf", BigInteger.valueOf(l), Field.Store.NO, 64);
+          sf = new StoredField("nf", BigInteger.valueOf(l));
+          typeAnswer = NumericType.BIG_INTEGER;
+        } else {
+          // int/long
+          if (random().nextBoolean()) {
+            final int i = random().nextInt();
+            answer = Integer.valueOf(i);
+            nf = new IntField("nf", i, Field.Store.NO);
+            sf = new StoredField("nf", i);
+            typeAnswer = NumericType.INT;
+          } else {
+            final long l = random().nextLong();
+            answer = Long.valueOf(l);
+            nf = new LongField("nf", l, Field.Store.NO);
+            sf = new StoredField("nf", l);
+            typeAnswer = NumericType.LONG;
+          }
         }
       }
       doc.add(nf);
@@ -343,6 +354,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
     final int i = random().nextBoolean() ? random().nextInt(42) : random().nextInt();
     final float f = random().nextFloat();
     final double d = random().nextDouble();
+    final BigInteger bigInteger = BigInteger.valueOf(l);
 
     List<Field> fields = Arrays.asList(
         new Field("bytes", bytes, ft),
@@ -350,7 +362,8 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
         new LongField("long", l, Store.YES),
         new IntField("int", i, Store.YES),
         new FloatField("float", f, Store.YES),
-        new DoubleField("double", d, Store.YES)
+        new DoubleField("double", d, Store.YES),
+        new BigIntegerField("biginteger", bigInteger, Store.YES, 64)
     );
 
     for (int k = 0; k < 100; ++k) {

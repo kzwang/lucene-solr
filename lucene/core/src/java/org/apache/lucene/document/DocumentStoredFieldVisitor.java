@@ -18,6 +18,7 @@ package org.apache.lucene.document;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -92,6 +93,11 @@ public class DocumentStoredFieldVisitor extends StoredFieldVisitor {
 
   @Override
   public void doubleField(FieldInfo fieldInfo, double value) {
+    doc.add(new StoredField(fieldInfo.name, value));
+  }
+
+  @Override
+  public void bigIntegerField(FieldInfo fieldInfo, BigInteger value) throws IOException {
     doc.add(new StoredField(fieldInfo.name, value));
   }
 

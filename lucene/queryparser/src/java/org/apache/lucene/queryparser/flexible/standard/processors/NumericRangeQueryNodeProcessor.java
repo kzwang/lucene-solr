@@ -17,6 +17,8 @@ package org.apache.lucene.queryparser.flexible.standard.processors;
  * limitations under the License.
  */
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.List;
@@ -87,33 +89,33 @@ public class NumericRangeQueryNodeProcessor extends QueryNodeProcessorImpl {
             Number lowerNumber = null, upperNumber = null;
             
              if (lowerText.length() > 0) {
-              
+
               try {
                 lowerNumber = numberFormat.parse(lowerText);
-                
+
               } catch (ParseException e) {
                 throw new QueryNodeParseException(new MessageImpl(
                     QueryParserMessages.COULD_NOT_PARSE_NUMBER, lower
                         .getTextAsString(), numberFormat.getClass()
                         .getCanonicalName()), e);
               }
-              
+
             }
-            
+
              if (upperText.length() > 0) {
-            
+
               try {
                 upperNumber = numberFormat.parse(upperText);
-                
+
               } catch (ParseException e) {
                 throw new QueryNodeParseException(new MessageImpl(
                     QueryParserMessages.COULD_NOT_PARSE_NUMBER, upper
                         .getTextAsString(), numberFormat.getClass()
                         .getCanonicalName()), e);
               }
-            
+
             }
-            
+
             switch (numericConfig.getType()) {
               case LONG:
                 if (upperNumber != null) upperNumber = upperNumber.longValue();
@@ -130,6 +132,17 @@ public class NumericRangeQueryNodeProcessor extends QueryNodeProcessorImpl {
               case FLOAT:
                 if (upperNumber != null) upperNumber = upperNumber.floatValue();
                 if (lowerNumber != null) lowerNumber = lowerNumber.floatValue();
+                break;
+              case BIG_INTEGER:
+                if (upperNumber != null) {
+                  assert upperNumber instanceof BigDecimal;
+                  upperNumber = ((BigDecimal) upperNumber).toBigInteger();
+                }
+                if (lowerNumber != null) {
+                  assert lowerNumber instanceof BigDecimal;
+                  lowerNumber = ((BigDecimal) lowerNumber).toBigInteger();
+                }
+                break;
             }
             
             NumericQueryNode lowerNode = new NumericQueryNode(

@@ -18,6 +18,7 @@ package org.apache.lucene.codecs.lucene40;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.math.BigInteger;
 
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.StoredFieldsReader;
@@ -61,6 +62,7 @@ public final class Lucene40StoredFieldsWriter extends StoredFieldsWriter {
   static final int FIELD_IS_NUMERIC_LONG = 2 << _NUMERIC_BIT_SHIFT;
   static final int FIELD_IS_NUMERIC_FLOAT = 3 << _NUMERIC_BIT_SHIFT;
   static final int FIELD_IS_NUMERIC_DOUBLE = 4 << _NUMERIC_BIT_SHIFT;
+  static final int FIELD_IS_NUMERIC_BIG_INTEGER = 5 << _NUMERIC_BIT_SHIFT;
 
   // the next possible bits are: 1 << 6; 1 << 7
   // currently unused: static final int FIELD_IS_NUMERIC_SHORT = 5 << _NUMERIC_BIT_SHIFT;
@@ -159,6 +161,8 @@ public final class Lucene40StoredFieldsWriter extends StoredFieldsWriter {
         bits |= FIELD_IS_NUMERIC_FLOAT;
       } else if (number instanceof Double) {
         bits |= FIELD_IS_NUMERIC_DOUBLE;
+      } else if (number instanceof BigInteger) {
+        bits |= FIELD_IS_NUMERIC_BIG_INTEGER;
       } else {
         throw new IllegalArgumentException("cannot store numeric type " + number.getClass());
       }
@@ -193,6 +197,8 @@ public final class Lucene40StoredFieldsWriter extends StoredFieldsWriter {
         fieldsStream.writeInt(Float.floatToIntBits(number.floatValue()));
       } else if (number instanceof Double) {
         fieldsStream.writeLong(Double.doubleToLongBits(number.doubleValue()));
+      } else if (number instanceof BigInteger) {
+        fieldsStream.writeBigInteger((BigInteger) number);
       } else {
         throw new AssertionError("Cannot get here");
       }

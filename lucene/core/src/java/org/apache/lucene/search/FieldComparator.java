@@ -18,6 +18,7 @@ package org.apache.lucene.search;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.BinaryDocValues;
@@ -564,6 +565,87 @@ public abstract class FieldComparator<T> {
         docValue = missingValue;
       }
       return Long.compare(topValue, docValue);
+    }
+  }
+
+  /** Parses field's values as BigInteger (using {@link
+   *  FieldCache#getBigIntegers and sorts by ascending value */
+  public static final class BigIntegerComparator extends NumericComparator<BigInteger> {
+    private final BigInteger[] values;
+    private final FieldCache.BigIntegerParser parser;
+    private FieldCache.BigIntegers currentReaderValues;
+    private BigInteger bottom;
+    private BigInteger topValue;
+
+    BigIntegerComparator(int numHits, String field, FieldCache.Parser parser, BigInteger missingValue) {
+      super(field, missingValue);
+      values = new BigInteger[numHits];
+      this.parser = (FieldCache.BigIntegerParser) parser;
+    }
+
+    @Override
+    public int compare(int slot1, int slot2) {
+      return values[slot1].compareTo(values[slot2]);
+    }
+
+    @Override
+    public int compareBottom(int doc) {
+      // TODO: there are sneaky non-branch ways to compute
+      // -1/+1/0 sign
+      BigInteger v2 = currentReaderValues.get(doc);
+      // Test for v2 == 0 to save Bits.get method call for
+      // the common case (doc has value and value is non-zero):
+      if (docsWithField != null && v2.compareTo(BigInteger.ZERO) == 0 && !docsWithField.get(doc)) {
+        v2 = missingValue;
+      }
+
+      return bottom.compareTo(v2);
+    }
+
+    @Override
+    public void copy(int slot, int doc) {
+      BigInteger v2 = currentReaderValues.get(doc);
+      // Test for v2 == 0 to save Bits.get method call for
+      // the common case (doc has value and value is non-zero):
+      if (docsWithField != null && v2.compareTo(BigInteger.ZERO) == 0 && !docsWithField.get(doc)) {
+        v2 = missingValue;
+      }
+
+      values[slot] = v2;
+    }
+
+    @Override
+    public FieldComparator<BigInteger> setNextReader(AtomicReaderContext context) throws IOException {
+      // NOTE: must do this before calling super otherwise
+      // we compute the docsWithField Bits twice!
+      currentReaderValues = FieldCache.DEFAULT.getBigIntegers(context.reader(), field, parser, missingValue != null);
+      return super.setNextReader(context);
+    }
+
+    @Override
+    public void setBottom(final int bottom) {
+      this.bottom = values[bottom];
+    }
+
+    @Override
+    public void setTopValue(BigInteger value) {
+      topValue = value;
+    }
+
+    @Override
+    public BigInteger value(int slot) {
+      return values[slot];
+    }
+
+    @Override
+    public int compareTop(int doc) {
+      BigInteger docValue = currentReaderValues.get(doc);
+      // Test for docValue == 0 to save Bits.get method call for
+      // the common case (doc has value and value is non-zero):
+      if (docsWithField != null && docValue.compareTo(BigInteger.ZERO) == 0 && !docsWithField.get(doc)) {
+        docValue = missingValue;
+      }
+      return topValue.compareTo(docValue);
     }
   }
 

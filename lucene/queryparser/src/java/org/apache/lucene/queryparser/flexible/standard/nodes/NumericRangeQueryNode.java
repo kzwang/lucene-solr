@@ -24,6 +24,8 @@ import org.apache.lucene.queryparser.flexible.core.nodes.FieldQueryNode;
 import org.apache.lucene.queryparser.flexible.messages.MessageImpl;
 import org.apache.lucene.queryparser.flexible.standard.config.NumericConfig;
 
+import java.math.BigInteger;
+
 /**
  * This query node represents a range query composed by {@link NumericQueryNode}
  * bounds, which means the bound values are {@link Number}s.
@@ -63,6 +65,8 @@ public class NumericRangeQueryNode extends
       return NumericType.DOUBLE;
     } else if (number instanceof Float) {
       return NumericType.FLOAT;
+    } else if (number instanceof BigInteger) {
+      return NumericType.BIG_INTEGER;
     } else {
       throw new QueryNodeException(
           new MessageImpl(

@@ -17,6 +17,7 @@ package org.apache.lucene.queryparser.flexible.standard.processors;
  * limitations under the License.
  */
 
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.List;
@@ -89,17 +90,17 @@ public class NumericQueryNodeProcessor extends QueryNodeProcessorImpl {
             Number number = null;
             
             if (text.length() > 0) {
-              
+
               try {
                 number = numberFormat.parse(text);
-                
+
               } catch (ParseException e) {
                 throw new QueryNodeParseException(new MessageImpl(
                     QueryParserMessages.COULD_NOT_PARSE_NUMBER, fieldNode
                         .getTextAsString(), numberFormat.getClass()
                         .getCanonicalName()), e);
               }
-              
+
               switch (numericConfig.getType()) {
                 case LONG:
                   number = number.longValue();
@@ -112,8 +113,13 @@ public class NumericQueryNodeProcessor extends QueryNodeProcessorImpl {
                   break;
                 case FLOAT:
                   number = number.floatValue();
+                  break;
+                case BIG_INTEGER:
+                  assert number instanceof BigDecimal;
+                  number = ((BigDecimal) number).toBigInteger();
+                  break;
               }
-              
+
             } else {
               throw new QueryNodeParseException(new MessageImpl(
                   QueryParserMessages.NUMERIC_CANNOT_BE_EMPTY, fieldNode.getFieldAsString()));

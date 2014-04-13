@@ -18,6 +18,7 @@ package org.apache.lucene.codecs.simpletext;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 
 import org.apache.lucene.codecs.StoredFieldsWriter;
 import org.apache.lucene.index.FieldInfo;
@@ -50,6 +51,7 @@ public class SimpleTextStoredFieldsWriter extends StoredFieldsWriter {
   final static BytesRef TYPE_LONG   = new BytesRef("long");
   final static BytesRef TYPE_FLOAT  = new BytesRef("float");
   final static BytesRef TYPE_DOUBLE = new BytesRef("double");
+  final static BytesRef TYPE_BIG_INTEGER = new BytesRef("biginteger");
 
   final static BytesRef END      = new BytesRef("END");
   final static BytesRef DOC      = new BytesRef("doc ");
@@ -129,6 +131,13 @@ public class SimpleTextStoredFieldsWriter extends StoredFieldsWriter {
           
         write(VALUE);
         write(Double.toString(n.doubleValue()));
+        newLine();
+      } else if (n instanceof BigInteger) {
+        write(TYPE_BIG_INTEGER);
+        newLine();
+
+        write(VALUE);
+        write(n.toString());
         newLine();
       } else {
         throw new IllegalArgumentException("cannot store numeric type " + n.getClass());

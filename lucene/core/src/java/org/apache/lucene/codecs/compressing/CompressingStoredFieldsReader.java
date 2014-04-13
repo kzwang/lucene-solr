@@ -20,6 +20,7 @@ package org.apache.lucene.codecs.compressing;
 import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.BYTE_ARR;
 import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.CODEC_SFX_DAT;
 import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.CODEC_SFX_IDX;
+import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.NUMERIC_BIG_INTEGER;
 import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.NUMERIC_DOUBLE;
 import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.NUMERIC_FLOAT;
 import static org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter.NUMERIC_INT;
@@ -201,6 +202,9 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       case NUMERIC_DOUBLE:
         visitor.doubleField(info, Double.longBitsToDouble(in.readLong()));
         break;
+      case NUMERIC_BIG_INTEGER:
+        visitor.bigIntegerField(info, in.readBigInteger());
+        break;
       default:
         throw new AssertionError("Unknown type flag: " + Integer.toHexString(bits));
     }
@@ -220,6 +224,9 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       case NUMERIC_LONG:
       case NUMERIC_DOUBLE:
         in.readLong();
+        break;
+      case NUMERIC_BIG_INTEGER:
+        in.readBigInteger();
         break;
       default:
         throw new AssertionError("Unknown type flag: " + Integer.toHexString(bits));
@@ -347,7 +354,7 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       final FieldInfo fieldInfo = fieldInfos.fieldInfo(fieldNumber);
 
       final int bits = (int) (infoAndBits & TYPE_MASK);
-      assert bits <= NUMERIC_DOUBLE: "bits=" + Integer.toHexString(bits);
+      assert bits <= NUMERIC_BIG_INTEGER: "bits=" + Integer.toHexString(bits);
 
       switch(visitor.needsField(fieldInfo)) {
         case YES:

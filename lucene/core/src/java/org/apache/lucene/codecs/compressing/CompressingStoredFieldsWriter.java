@@ -21,6 +21,7 @@ import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter.FIELD
 import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter.FIELDS_INDEX_EXTENSION;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import org.apache.lucene.codecs.CodecUtil;
@@ -63,8 +64,9 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
   static final int  NUMERIC_FLOAT = 0x03;
   static final int   NUMERIC_LONG = 0x04;
   static final int NUMERIC_DOUBLE = 0x05;
+  static final int NUMERIC_BIG_INTEGER = 0x06;
 
-  static final int TYPE_BITS = PackedInts.bitsRequired(NUMERIC_DOUBLE);
+  static final int TYPE_BITS = PackedInts.bitsRequired(NUMERIC_BIG_INTEGER);
   static final int TYPE_MASK = (int) PackedInts.maxValue(TYPE_BITS);
 
   static final String CODEC_SFX_IDX = "Index";
@@ -256,6 +258,8 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
         bits = NUMERIC_FLOAT;
       } else if (number instanceof Double) {
         bits = NUMERIC_DOUBLE;
+      } else if (number instanceof BigInteger) {
+        bits = NUMERIC_BIG_INTEGER;
       } else {
         throw new IllegalArgumentException("cannot store numeric type " + number.getClass());
       }
@@ -292,6 +296,8 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
         bufferedDocs.writeInt(Float.floatToIntBits(number.floatValue()));
       } else if (number instanceof Double) {
         bufferedDocs.writeLong(Double.doubleToLongBits(number.doubleValue()));
+      } else if (number instanceof BigInteger) {
+        bufferedDocs.writeBigInteger((BigInteger) number);
       } else {
         throw new AssertionError("Cannot get here");
       }

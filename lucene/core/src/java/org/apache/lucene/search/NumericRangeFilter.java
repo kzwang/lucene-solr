@@ -24,6 +24,8 @@ import org.apache.lucene.document.IntField; // for javadocs
 import org.apache.lucene.document.LongField; // for javadocs
 import org.apache.lucene.util.NumericUtils; // for javadocs
 
+import java.math.BigInteger;
+
 /**
  * A {@link Filter} that only accepts numeric values within
  * a specified range. To use this, you must first index the
@@ -176,6 +178,17 @@ public final class NumericRangeFilter<T extends Number> extends MultiTermQueryWr
   ) {
     return new NumericRangeFilter<>(
       NumericRangeQuery.newFloatRange(field, min, max, minInclusive, maxInclusive)
+    );
+  }
+
+  /**
+   * todo: javadoc
+   */
+  public static NumericRangeFilter<BigInteger> newBigIntegerRange(final String field, final int precisionStep,
+                                                                     BigInteger min, BigInteger max, final boolean minInclusive, final boolean maxInclusive, final int valueSize
+  ) {
+    return new NumericRangeFilter<>(
+        NumericRangeQuery.newBigIntegerRange(field, precisionStep, min, max, minInclusive, maxInclusive, valueSize)
     );
   }
 

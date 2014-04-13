@@ -28,6 +28,8 @@ import org.apache.lucene.queryparser.flexible.standard.nodes.NumericQueryNode;
 import org.apache.lucene.queryparser.flexible.standard.nodes.NumericRangeQueryNode;
 import org.apache.lucene.search.NumericRangeQuery;
 
+import java.math.BigInteger;
+
 /**
  * Builds {@link NumericRangeQuery}s out of {@link NumericRangeQueryNode}s.
  *
@@ -81,9 +83,15 @@ public class NumericRangeQueryNodeBuilder implements StandardQueryBuilder {
         return NumericRangeQuery.newDoubleRange(field, precisionStep,
             (Double) lowerNumber, (Double) upperNumber, minInclusive,
             maxInclusive);
+
+      case BIG_INTEGER:
+        int valueSize = numericConfig.getValueSize();
+        return NumericRangeQuery.newBigIntegerRange(field, precisionStep,
+            (BigInteger) lowerNumber, (BigInteger) upperNumber, minInclusive,
+            maxInclusive, valueSize);
         
-        default :
-          throw new QueryNodeException(new MessageImpl(
+      default :
+        throw new QueryNodeException(new MessageImpl(
             QueryParserMessages.UNSUPPORTED_NUMERIC_DATA_TYPE, numberType));
         
     }

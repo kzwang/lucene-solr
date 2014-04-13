@@ -184,6 +184,9 @@ public final class Lucene40StoredFieldsReader extends StoredFieldsReader impleme
         case FIELD_IS_NUMERIC_DOUBLE:
           visitor.doubleField(info, Double.longBitsToDouble(fieldsStream.readLong()));
           return;
+        case FIELD_IS_NUMERIC_BIG_INTEGER:
+          visitor.bigIntegerField(info, fieldsStream.readBigInteger());
+          return;
         default:
           throw new CorruptIndexException("Invalid numeric type: " + Integer.toHexString(numeric));
       }
@@ -210,6 +213,9 @@ public final class Lucene40StoredFieldsReader extends StoredFieldsReader impleme
         case FIELD_IS_NUMERIC_LONG:
         case FIELD_IS_NUMERIC_DOUBLE:
           fieldsStream.readLong();
+          return;
+        case FIELD_IS_NUMERIC_BIG_INTEGER:
+          fieldsStream.readBigInteger();
           return;
         default: 
           throw new CorruptIndexException("Invalid numeric type: " + Integer.toHexString(numeric));

@@ -19,8 +19,10 @@ package org.apache.lucene.document;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.math.BigInteger;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.BigNumericTokenStream;
 import org.apache.lucene.analysis.NumericTokenStream;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -81,6 +83,11 @@ public class Field implements IndexableField, StorableField {
    * @see #boost()
    */
   protected float boost = 1.0f;
+
+  /**
+   * Value size for BigInteger field
+   */
+  protected int valueSize;
 
   /**
    * Expert: creates a field with no initial value.
@@ -390,6 +397,17 @@ public class Field implements IndexableField, StorableField {
   }
 
   /**
+   * Expert: change the value of this field. See
+   * {@link #setStringValue(String)}.
+   */
+  public void setBigIntegerValue(BigInteger value) {
+    if (!(fieldsData instanceof BigInteger)) {
+      throw new IllegalArgumentException("cannot change value type from " + fieldsData.getClass().getSimpleName() + " to BigInteger");
+    }
+    fieldsData = value;
+  }
+
+  /**
    * Expert: change the value of this field. See 
    * {@link #setStringValue(String)}.
    */
@@ -506,30 +524,42 @@ public class Field implements IndexableField, StorableField {
 
     final NumericType numericType = fieldType().numericType();
     if (numericType != null) {
-      if (!(internalTokenStream instanceof NumericTokenStream)) {
-        // lazy init the TokenStream as it is heavy to instantiate
-        // (attributes,...) if not needed (stored field loading)
-        internalTokenStream = new NumericTokenStream(type.numericPrecisionStep());
+      if (numericType == NumericType.BIG_INTEGER) {
+        if (!(internalTokenStream instanceof BigNumericTokenStream)) {
+          // lazy init the TokenStream as it is heavy to instantiate
+          // (attributes,...) if not needed (stored field loading)
+          internalTokenStream = new BigNumericTokenStream(type.numericPrecisionStep(), valueSize);
+        }
+        final BigNumericTokenStream nts = (BigNumericTokenStream) internalTokenStream;
+        final BigInteger val = (BigInteger) fieldsData;
+        nts.setBigIntValue(val);
+      } else {
+        if (!(internalTokenStream instanceof NumericTokenStream)) {
+          // lazy init the TokenStream as it is heavy to instantiate
+          // (attributes,...) if not needed (stored field loading)
+          internalTokenStream = new NumericTokenStream(type.numericPrecisionStep());
+        }
+        final NumericTokenStream nts = (NumericTokenStream) internalTokenStream;
+        // initialize value in TokenStream
+        final Number val = (Number) fieldsData;
+        switch (numericType) {
+          case INT:
+            nts.setIntValue(val.intValue());
+            break;
+          case LONG:
+            nts.setLongValue(val.longValue());
+            break;
+          case FLOAT:
+            nts.setFloatValue(val.floatValue());
+            break;
+          case DOUBLE:
+            nts.setDoubleValue(val.doubleValue());
+            break;
+          default:
+            throw new AssertionError("Should never get here");
+        }
       }
-      final NumericTokenStream nts = (NumericTokenStream) internalTokenStream;
-      // initialize value in TokenStream
-      final Number val = (Number) fieldsData;
-      switch (numericType) {
-      case INT:
-        nts.setIntValue(val.intValue());
-        break;
-      case LONG:
-        nts.setLongValue(val.longValue());
-        break;
-      case FLOAT:
-        nts.setFloatValue(val.floatValue());
-        break;
-      case DOUBLE:
-        nts.setDoubleValue(val.doubleValue());
-        break;
-      default:
-        throw new AssertionError("Should never get here");
-      }
+
       return internalTokenStream;
     }
 

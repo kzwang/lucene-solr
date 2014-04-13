@@ -5,6 +5,8 @@ import org.apache.lucene.index.StorableField;
 import org.apache.lucene.search.IndexSearcher; // javadocs
 import org.apache.lucene.util.BytesRef;
 
+import java.math.BigInteger;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -163,6 +165,17 @@ public class StoredField extends Field {
    * @throws IllegalArgumentException if the field name is null.
    */
   public StoredField(String name, double value) {
+    super(name, TYPE);
+    fieldsData = value;
+  }
+
+  /**
+   * Create a stored-only field with the given BigInteger value.
+   * @param name field name
+   * @param value BigInteger value
+   * @throws IllegalArgumentException if the field name is null.
+   */
+  public StoredField(String name, BigInteger value) {
     super(name, TYPE);
     fieldsData = value;
   }

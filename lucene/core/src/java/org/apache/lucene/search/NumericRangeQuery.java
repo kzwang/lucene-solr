@@ -18,6 +18,7 @@ package org.apache.lucene.search;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.LinkedList;
 
 import org.apache.lucene.analysis.NumericTokenStream; // for javadocs
@@ -30,6 +31,7 @@ import org.apache.lucene.index.FilteredTermsEnum;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.AttributeSource;
+import org.apache.lucene.util.BigNumericUtils;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.NumericUtils;
 import org.apache.lucene.util.ToStringUtils;
@@ -168,7 +170,12 @@ import org.apache.lucene.index.Term; // for javadocs
 public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
 
   private NumericRangeQuery(final String field, final int precisionStep, final NumericType dataType,
-    T min, T max, final boolean minInclusive, final boolean maxInclusive
+                            T min, T max, final boolean minInclusive, final boolean maxInclusive){
+    this(field, precisionStep, dataType, min, max, minInclusive, maxInclusive, 0);
+  }
+
+  private NumericRangeQuery(final String field, final int precisionStep, final NumericType dataType,
+    T min, T max, final boolean minInclusive, final boolean maxInclusive, final int valueSize
   ) {
     super(field);
     if (precisionStep < 1)
@@ -179,6 +186,7 @@ public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
     this.max = max;
     this.minInclusive = minInclusive;
     this.maxInclusive = maxInclusive;
+    this.valueSize = valueSize;
   }
   
   /**
@@ -293,6 +301,16 @@ public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
     return new NumericRangeQuery<>(field, NumericUtils.PRECISION_STEP_DEFAULT, NumericType.FLOAT, min, max, minInclusive, maxInclusive);
   }
 
+  /**
+   * todo : javadoc
+   */
+  public static NumericRangeQuery<BigInteger> newBigIntegerRange(final String field, final int precisionStep,
+                                                                    BigInteger min, BigInteger max, final boolean minInclusive, final boolean maxInclusive, final int valueSize
+  ) {
+    return new NumericRangeQuery<>(field, precisionStep, NumericType.BIG_INTEGER, min, max, minInclusive, maxInclusive, valueSize);
+  }
+
+
   @Override @SuppressWarnings("unchecked")
   protected TermsEnum getTermsEnum(final Terms terms, AttributeSource atts) throws IOException {
     // very strange: java.lang.Number itself is not Comparable, but all subclasses used here are
@@ -343,14 +361,15 @@ public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
         (q.max == null ? max == null : q.max.equals(max)) &&
         minInclusive == q.minInclusive &&
         maxInclusive == q.maxInclusive &&
-        precisionStep == q.precisionStep
+        precisionStep == q.precisionStep &&
+        valueSize == q.valueSize
       );
     }
     return false;
   }
 
   @Override
-  public final int hashCode() {
+  public final int hashCode() {       // todo: include valueSize
     int hash = super.hashCode();
     hash += precisionStep^0x64365465;
     if (min != null) hash += min.hashCode()^0x14fa55fb;
@@ -365,6 +384,7 @@ public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
   final NumericType dataType;
   final T min, max;
   final boolean minInclusive,maxInclusive;
+  final int valueSize; // only used for BigInteger
 
   // used to handle float/double infinity correcty
   static final long LONG_NEGATIVE_INFINITY =
@@ -375,6 +395,8 @@ public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
     NumericUtils.floatToSortableInt(Float.NEGATIVE_INFINITY);
   static final int INT_POSITIVE_INFINITY =
     NumericUtils.floatToSortableInt(Float.POSITIVE_INFINITY);
+
+  static final BigInteger MINUS_ONE = BigInteger.valueOf(-1);
 
   /**
    * Subclass of FilteredTermsEnum for enumerating all terms that match the
@@ -474,7 +496,25 @@ public final class NumericRangeQuery<T extends Number> extends MultiTermQuery {
           }, precisionStep, minBound, maxBound);
           break;
         }
-          
+
+        case BIG_INTEGER:
+          BigInteger minBound = min == null? MINUS_ONE.shiftLeft(valueSize - 1) : (BigInteger) min;  // min value is -2 ^ (valueSize -1)
+          if (!minInclusive) {
+            minBound = minBound.add(BigInteger.ONE);
+          }
+          BigInteger maxBound = max == null ? BigInteger.ONE.shiftLeft(valueSize - 1).subtract(BigInteger.ONE) : (BigInteger) max;  // max value is 2 ^ (valueSize -1) - 1
+          if (!maxInclusive) {
+            maxBound = maxBound.subtract(BigInteger.ONE);
+          }
+
+          BigNumericUtils.splitRange(new BigNumericUtils.BigIntegerRangeBuilder() {
+            @Override
+            public final void addRange(BytesRef minPrefixCoded, BytesRef maxPrefixCoded) {
+              rangeBounds.add(minPrefixCoded);
+              rangeBounds.add(maxPrefixCoded);
+            }
+          }, valueSize, precisionStep, minBound, maxBound);
+          break;
         default:
           // should never happen
           throw new IllegalArgumentException("Invalid NumericType");

@@ -18,6 +18,7 @@ package org.apache.lucene.store;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Map;
 import java.util.Set;
 
@@ -296,5 +297,16 @@ public abstract class DataOutput {
         writeString(value);
       }
     }
+  }
+
+  /**
+   * todo: javadoc
+   * @param value
+   * @throws IOException
+   */
+  public void writeBigInteger(BigInteger value) throws IOException{
+    byte[] bytes = value.toByteArray();
+    writeVInt(bytes.length);
+    writeBytes(bytes, bytes.length);
   }
 }

@@ -18,7 +18,9 @@ package org.apache.lucene.queryparser.flexible.standard;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -32,6 +34,7 @@ import java.util.TimeZone;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.MockAnalyzer;
+import org.apache.lucene.document.BigIntegerField;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DoubleField;
 import org.apache.lucene.document.Field;
@@ -161,6 +164,7 @@ public class TestNumericQueryParser extends LuceneTestCase {
     NUMBER_FORMAT.setMinimumFractionDigits((random().nextInt() & 20) + 1);
     NUMBER_FORMAT.setMaximumIntegerDigits((random().nextInt() & 20) + 1);
     NUMBER_FORMAT.setMinimumIntegerDigits((random().nextInt() & 20) + 1);
+    ((DecimalFormat)NUMBER_FORMAT).setParseBigDecimal(true);
     
     double randomDouble;
     long randomLong;
@@ -183,6 +187,7 @@ public class TestNumericQueryParser extends LuceneTestCase {
     randomNumberMap.put(NumericType.INT.name(), randomInt);
     randomNumberMap.put(NumericType.FLOAT.name(), randomFloat);
     randomNumberMap.put(NumericType.DOUBLE.name(), randomDouble);
+    randomNumberMap.put(NumericType.BIG_INTEGER.name(), BigInteger.valueOf(randomLong));
     randomNumberMap.put(DATE_FIELD_NAME, randomDate);
     
     RANDOM_NUMBER_MAP = Collections.unmodifiableMap(randomNumberMap);
@@ -200,7 +205,7 @@ public class TestNumericQueryParser extends LuceneTestCase {
     
     for (NumericType type : NumericType.values()) {
       numericConfigMap.put(type.name(), new NumericConfig(PRECISION_STEP,
-          NUMBER_FORMAT, type));
+          NUMBER_FORMAT, type, 64));
 
       FieldType ft = new FieldType(IntField.TYPE_NOT_STORED);
       ft.setNumericType(type);
@@ -221,6 +226,9 @@ public class TestNumericQueryParser extends LuceneTestCase {
         break;
       case DOUBLE:
         field = new DoubleField(type.name(), 0.0, ft);
+        break;
+      case BIG_INTEGER:
+        field = new BigIntegerField(type.name(), BigInteger.valueOf(0), ft, 64);
         break;
       default:
         fail();
@@ -277,7 +285,10 @@ public class TestNumericQueryParser extends LuceneTestCase {
           
         } else if (NumericType.INT.name().equals(fieldName)) {
           number = -number.intValue();
-          
+
+        } else if (NumericType.BIG_INTEGER.name().equals(fieldName)) {
+          number = ((BigInteger)number).negate();
+
         } else {
           throw new IllegalArgumentException("field name not found: "
               + fieldName);
@@ -286,8 +297,11 @@ public class TestNumericQueryParser extends LuceneTestCase {
         return number;
         
       default:
-        return 0;
-        
+        if (NumericType.BIG_INTEGER.name().equals(fieldName)) {
+          return BigInteger.ZERO;
+        } else {
+          return 0;
+        }
     }
     
   }
@@ -311,6 +325,9 @@ public class TestNumericQueryParser extends LuceneTestCase {
     number = getNumberType(numberType, NumericType.FLOAT.name());
     numericFieldMap.get(NumericType.FLOAT.name()).setFloatValue(
         number.floatValue());
+
+    number = getNumberType(numberType, NumericType.BIG_INTEGER.name());
+    numericFieldMap.get(NumericType.BIG_INTEGER.name()).setBigIntegerValue((BigInteger) number);
     
     number = getNumberType(numberType, DATE_FIELD_NAME);
     numericFieldMap.get(DATE_FIELD_NAME).setLongValue(number.longValue());

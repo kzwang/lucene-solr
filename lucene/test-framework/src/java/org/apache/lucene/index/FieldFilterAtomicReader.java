@@ -18,6 +18,7 @@ package org.apache.lucene.index;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
@@ -100,6 +101,11 @@ public final class FieldFilterAtomicReader extends FilterAtomicReader {
       @Override
       public void doubleField(FieldInfo fieldInfo, double value) throws IOException {
         visitor.doubleField(fieldInfo, value);
+      }
+
+      @Override
+      public void bigIntegerField(FieldInfo fieldInfo, BigInteger value) throws IOException {
+        visitor.bigIntegerField(fieldInfo, value);
       }
 
       @Override

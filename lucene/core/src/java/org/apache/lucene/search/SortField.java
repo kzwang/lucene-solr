@@ -18,6 +18,7 @@ package org.apache.lucene.search;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Comparator;
 
 import org.apache.lucene.util.BytesRef;
@@ -66,6 +67,10 @@ public class SortField {
     /** Sort using term values as encoded Doubles.  Sort values are Double and
      * lower values are at the front. */
     DOUBLE,
+
+    /** Sort using term values as encoded BigIntegers.  Sort values are BigInteger and
+     * lower values are at the front. */
+    BIG_INTEGER,
 
     /** Sort using a custom Comparator.  Sort values are any Comparable and
      * sorting is done according to natural order. */
@@ -185,7 +190,7 @@ public class SortField {
       if (missingValue != STRING_FIRST && missingValue != STRING_LAST) {
         throw new IllegalArgumentException("For STRING type, missing value must be either STRING_FIRST or STRING_LAST");
       }
-    } else if (type != Type.INT && type != Type.FLOAT && type != Type.LONG && type != Type.DOUBLE) {
+    } else if (type != Type.INT && type != Type.FLOAT && type != Type.LONG && type != Type.DOUBLE && type != Type.BIG_INTEGER) {
       throw new IllegalArgumentException("Missing value only works for numeric or STRING types");
     }
     this.missingValue = missingValue;
@@ -391,6 +396,9 @@ public class SortField {
 
     case DOUBLE:
       return new FieldComparator.DoubleComparator(numHits, field, parser, (Double) missingValue);
+
+    case BIG_INTEGER:
+      return new FieldComparator.BigIntegerComparator(numHits, field, parser, (BigInteger) missingValue);
 
     case CUSTOM:
       assert comparatorSource != null;

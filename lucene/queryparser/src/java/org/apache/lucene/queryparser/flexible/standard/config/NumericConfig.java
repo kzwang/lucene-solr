@@ -36,6 +36,8 @@ public class NumericConfig {
   private NumberFormat format;
   
   private NumericType type;
+
+  private int valueSize; // value size for BigInteger
   
   /**
    * Constructs a {@link NumericConfig} object.
@@ -54,10 +56,19 @@ public class NumericConfig {
    */
   public NumericConfig(int precisionStep, NumberFormat format,
       NumericType type) {
+    this(precisionStep, format, type, 0);
+    
+  }
+
+  /**
+   * todo: javadoc
+   */
+  public NumericConfig(int precisionStep, NumberFormat format,
+                       NumericType type, int valueSize) {
     setPrecisionStep(precisionStep);
     setNumberFormat(format);
     setType(type);
-    
+    setValueSize(valueSize);
   }
   
   /**
@@ -135,7 +146,19 @@ public class NumericConfig {
     this.format = format;
     
   }
-  
+
+  /**
+   * todo: javadoc
+   * @param valueSize
+   */
+  public void setValueSize(int valueSize) {
+    this.valueSize = valueSize;
+  }
+
+  public int getValueSize() {
+    return valueSize;
+  }
+
   @Override
   public boolean equals(Object obj) {
     

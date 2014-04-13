@@ -40,7 +40,9 @@ public class FieldType implements IndexableFieldType  {
     /** 32-bit float numeric type */
     FLOAT, 
     /** 64-bit double numeric type */
-    DOUBLE
+    DOUBLE,
+    /** BigInteger */
+    BIG_INTEGER
   }
 
   private boolean indexed;

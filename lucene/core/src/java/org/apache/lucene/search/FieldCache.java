@@ -19,6 +19,7 @@ package org.apache.lucene.search;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.math.BigInteger;
 
 import org.apache.lucene.analysis.NumericTokenStream;
 import org.apache.lucene.document.DoubleField;
@@ -34,6 +35,7 @@ import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.util.BigNumericUtils;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.NumericUtils;
@@ -107,6 +109,20 @@ public interface FieldCache {
     };
   }
 
+  /** Field values as BigInteger */
+  public static abstract class BigIntegers {
+    /** Return an double representation of this field's value. */
+    public abstract BigInteger get(int docID);
+
+    /** Zero value for every document */
+    public static final BigIntegers EMPTY = new BigIntegers() {
+      @Override
+      public BigInteger get(int docID) {
+        return BigInteger.ZERO;
+      }
+    };
+  }
+
   /**
    * Placeholder indicating creation of this cache is currently in-progress.
    */
@@ -162,6 +178,14 @@ public interface FieldCache {
   public interface DoubleParser extends Parser {
     /** Return an double representation of this field's value. */
     public double parseDouble(BytesRef term);
+  }
+
+  /** Interface to parse doubles from document fields.
+   * @see FieldCache#getBigIntegers(AtomicReader, String, FieldCache.BigIntegerParser, boolean)
+   */
+  public interface BigIntegerParser extends Parser {
+    /** Return an double representation of this field's value. */
+    public BigInteger parseBigInteger(BytesRef term);
   }
 
   /** Expert: The cache used internally by sorting and range query classes. */
@@ -245,6 +269,25 @@ public interface FieldCache {
     @Override
     public TermsEnum termsEnum(Terms terms) throws IOException {
       return NumericUtils.filterPrefixCodedLongs(terms.iterator(null));
+    }
+  };
+
+  /**
+   * todo: javadoc
+   */
+  public static final BigIntegerParser NUMERIC_UTILS_BIG_INTEGER_PARSER = new BigIntegerParser(){
+    @Override
+    public BigInteger parseBigInteger(BytesRef term) {
+      return BigNumericUtils.prefixCodedToBigInteger(term);
+    }
+    @Override
+    public String toString() {
+      return FieldCache.class.getName()+".NUMERIC_UTILS_BIG_INTEGER_PARSER";
+    }
+
+    @Override
+    public TermsEnum termsEnum(Terms terms) throws IOException {
+      return BigNumericUtils.filterPrefixCodedBigIntegers(terms.iterator(null));
     }
   };
   
@@ -390,6 +433,18 @@ public interface FieldCache {
    *           If any error occurs.
    */
   public Doubles getDoubles(AtomicReader reader, String field, DoubleParser parser, boolean setDocsWithField) throws IOException;
+
+
+  /**
+   * todo: javadoc
+   * @param reader
+   * @param field
+   * @param parser
+   * @param setDocsWithField
+   * @return
+   * @throws IOException
+   */
+  public BigIntegers getBigIntegers(AtomicReader reader, String field, BigIntegerParser parser, boolean setDocsWithField) throws IOException;
 
   /** Checks the internal cache for an appropriate entry, and if none
    * is found, reads the term values in <code>field</code>

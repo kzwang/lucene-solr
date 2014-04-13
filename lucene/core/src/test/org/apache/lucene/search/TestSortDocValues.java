@@ -18,7 +18,9 @@ package org.apache.lucene.search;
  */
 
 import java.io.IOException;
+import java.math.BigInteger;
 
+import org.apache.lucene.document.BigNumericDocValuesField;
 import org.apache.lucene.document.BinaryDocValuesField;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DoubleDocValuesField;
@@ -797,6 +799,138 @@ public class TestSortDocValues extends LuceneTestCase {
     assertEquals("4.2333333333332", searcher.doc(td.scoreDocs[1].doc).get("value"));
     assertEquals("4.2333333333333", searcher.doc(td.scoreDocs[2].doc).get("value"));
     assertNull(searcher.doc(td.scoreDocs[3].doc).get("value"));
+
+    ir.close();
+    dir.close();
+  }
+
+  /** Tests sorting on type BigInteger */
+  public void testBigInteger() throws IOException {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+    Document doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(300000)));
+    doc.add(newStringField("value", "300000", Field.Store.YES));
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(-1)));
+    doc.add(newStringField("value", "-1", Field.Store.YES));
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(4)));
+    doc.add(newStringField("value", "4", Field.Store.YES));
+    writer.addDocument(doc);
+    IndexReader ir = writer.getReader();
+    writer.shutdown();
+
+    IndexSearcher searcher = newSearcher(ir);
+    Sort sort = new Sort(new SortField("value", SortField.Type.BIG_INTEGER));
+
+    TopDocs td = searcher.search(new MatchAllDocsQuery(), 10, sort);
+    assertEquals(3, td.totalHits);
+    // numeric order
+    assertEquals("-1", searcher.doc(td.scoreDocs[0].doc).get("value"));
+    assertEquals("4", searcher.doc(td.scoreDocs[1].doc).get("value"));
+    assertEquals("300000", searcher.doc(td.scoreDocs[2].doc).get("value"));
+    assertNoFieldCaches();
+
+    ir.close();
+    dir.close();
+  }
+
+  /** Tests sorting on type BigInteger in reverse */
+  public void testBigIntegerReverse() throws IOException {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+    Document doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(300000)));
+    doc.add(newStringField("value", "300000", Field.Store.YES));
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(-1)));
+    doc.add(newStringField("value", "-1", Field.Store.YES));
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(4)));
+    doc.add(newStringField("value", "4", Field.Store.YES));
+    writer.addDocument(doc);
+    IndexReader ir = writer.getReader();
+    writer.shutdown();
+
+    IndexSearcher searcher = newSearcher(ir);
+    Sort sort = new Sort(new SortField("value", SortField.Type.BIG_INTEGER, true));
+
+    TopDocs td = searcher.search(new MatchAllDocsQuery(), 10, sort);
+    assertEquals(3, td.totalHits);
+    // reverse numeric order
+    assertEquals("300000", searcher.doc(td.scoreDocs[0].doc).get("value"));
+    assertEquals("4", searcher.doc(td.scoreDocs[1].doc).get("value"));
+    assertEquals("-1", searcher.doc(td.scoreDocs[2].doc).get("value"));
+    assertNoFieldCaches();
+
+    ir.close();
+    dir.close();
+  }
+
+  /** Tests sorting on type BigInteger with a missing value */
+  public void testBigIntegerMissing() throws IOException {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+    Document doc = new Document();
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(-1)));
+    doc.add(newStringField("value", "-1", Field.Store.YES));
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(4)));
+    doc.add(newStringField("value", "4", Field.Store.YES));
+    writer.addDocument(doc);
+    IndexReader ir = writer.getReader();
+    writer.shutdown();
+
+    IndexSearcher searcher = newSearcher(ir);
+    Sort sort = new Sort(new SortField("value", SortField.Type.BIG_INTEGER));
+
+    TopDocs td = searcher.search(new MatchAllDocsQuery(), 10, sort);
+    assertEquals(3, td.totalHits);
+    // null is treated as a 0
+    assertEquals("-1", searcher.doc(td.scoreDocs[0].doc).get("value"));
+    assertNull(searcher.doc(td.scoreDocs[1].doc).get("value"));
+    assertEquals("4", searcher.doc(td.scoreDocs[2].doc).get("value"));
+
+    ir.close();
+    dir.close();
+  }
+
+  /** Tests sorting on type BigInteger, specifying the missing value should be treated as Integer.MAX_VALUE */
+  public void testBigIntegerMissingLast() throws IOException {
+    Directory dir = newDirectory();
+    RandomIndexWriter writer = new RandomIndexWriter(random(), dir);
+    Document doc = new Document();
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(-1)));
+    doc.add(newStringField("value", "-1", Field.Store.YES));
+    writer.addDocument(doc);
+    doc = new Document();
+    doc.add(new BigNumericDocValuesField("value", BigInteger.valueOf(4)));
+    doc.add(newStringField("value", "4", Field.Store.YES));
+    writer.addDocument(doc);
+    IndexReader ir = writer.getReader();
+    writer.shutdown();
+
+    IndexSearcher searcher = newSearcher(ir);
+    SortField sortField = new SortField("value", SortField.Type.BIG_INTEGER);
+    sortField.setMissingValue(BigInteger.valueOf(Integer.MAX_VALUE));
+    Sort sort = new Sort(sortField);
+
+    TopDocs td = searcher.search(new MatchAllDocsQuery(), 10, sort);
+    assertEquals(3, td.totalHits);
+    // null is treated as a Integer.MAX_VALUE
+    assertEquals("-1", searcher.doc(td.scoreDocs[0].doc).get("value"));
+    assertEquals("4", searcher.doc(td.scoreDocs[1].doc).get("value"));
+    assertNull(searcher.doc(td.scoreDocs[2].doc).get("value"));
 
     ir.close();
     dir.close();

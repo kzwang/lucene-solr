@@ -31,6 +31,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
 public class TestNumericRangeQueryBuilder extends LuceneTestCase {
@@ -161,6 +162,34 @@ public class TestNumericRangeQueryBuilder extends LuceneTestCase {
     NumericRangeQuery<Float> numRangeFilter2 = (NumericRangeQuery) filter2;
     assertEquals(Float.valueOf(-2.321432f), numRangeFilter2.getMin());
     assertEquals(Float.valueOf(32432.23f), numRangeFilter2.getMax());
+    assertEquals("AGE", numRangeFilter2.getField());
+    assertTrue(numRangeFilter2.includesMin());
+    assertFalse(numRangeFilter2.includesMax());
+  }
+
+  @SuppressWarnings({"unchecked","rawtypes"})
+  public void testGetFilterBigInteger() throws Exception {
+    NumericRangeQueryBuilder filterBuilder = new NumericRangeQueryBuilder();
+
+    String xml = "<NumericRangeQuery fieldName='AGE' type='big_integer' lowerTerm='-2321' upperTerm='60000000' valueSize='64'/>";
+    Document doc = getDocumentFromString(xml);
+    Query filter = filterBuilder.getQuery(doc.getDocumentElement());
+    assertTrue(filter instanceof NumericRangeQuery<?>);
+    NumericRangeQuery<BigInteger> numRangeFilter = (NumericRangeQuery) filter;
+    assertEquals(BigInteger.valueOf(-2321L), numRangeFilter.getMin());
+    assertEquals(BigInteger.valueOf(60000000L), numRangeFilter.getMax());
+    assertEquals("AGE", numRangeFilter.getField());
+    assertTrue(numRangeFilter.includesMin());
+    assertTrue(numRangeFilter.includesMax());
+
+    String xml2 = "<NumericRangeQuery fieldName='AGE' type='big_integer' lowerTerm='-2321' upperTerm='60000000' includeUpper='false' valueSize='64'/>";
+    Document doc2 = getDocumentFromString(xml2);
+    Query filter2 = filterBuilder.getQuery(doc2.getDocumentElement());
+    assertTrue(filter2 instanceof NumericRangeQuery<?>);
+
+    NumericRangeQuery<BigInteger> numRangeFilter2 = (NumericRangeQuery) filter2;
+    assertEquals(BigInteger.valueOf(-2321L), numRangeFilter2.getMin());
+    assertEquals(BigInteger.valueOf(60000000L), numRangeFilter2.getMax());
     assertEquals("AGE", numRangeFilter2.getField());
     assertTrue(numRangeFilter2.includesMin());
     assertFalse(numRangeFilter2.includesMax());

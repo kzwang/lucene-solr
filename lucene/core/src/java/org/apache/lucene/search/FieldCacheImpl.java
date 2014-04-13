@@ -19,7 +19,9 @@ package org.apache.lucene.search;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +63,7 @@ class FieldCacheImpl implements FieldCache {
   }
 
   private synchronized void init() {
-    caches = new HashMap<>(9);
+    caches = new HashMap<>(10);
     caches.put(Integer.TYPE, new IntCache(this));
     caches.put(Float.TYPE, new FloatCache(this));
     caches.put(Long.TYPE, new LongCache(this));
@@ -70,6 +72,7 @@ class FieldCacheImpl implements FieldCache {
     caches.put(SortedDocValues.class, new SortedDocValuesCache(this));
     caches.put(DocTermOrds.class, new DocTermOrdsCache(this));
     caches.put(DocsWithFieldCache.class, new DocsWithFieldCache(this));
+    caches.put(BigInteger.class, new BigIntegerCache(this));
   }
 
   @Override
@@ -891,6 +894,107 @@ class FieldCacheImpl implements FieldCache {
         values = new double[reader.maxDoc()];
       }
       return new DoublesFromArray(values);
+    }
+  }
+
+  @Override
+  public BigIntegers getBigIntegers(AtomicReader reader, String field, BigIntegerParser parser, boolean setDocsWithField) throws IOException {
+    final BinaryDocValues valuesIn = reader.getBinaryDocValues(field);
+    if (valuesIn != null) {
+      // Not cached here by FieldCacheImpl (cached instead
+      // per-thread by SegmentReader):
+      return new BigIntegers() {
+        @Override
+        public BigInteger get(int docID) {
+          BytesRef bytesRef = new BytesRef();
+          valuesIn.get(docID, bytesRef);
+          if (bytesRef.length == 0) return BigInteger.ZERO;
+          return new BigInteger(Arrays.copyOfRange(bytesRef.bytes, bytesRef.offset, bytesRef.offset + bytesRef.length));
+        }
+      };
+    } else {
+      final FieldInfo info = reader.getFieldInfos().fieldInfo(field);
+      if (info == null) {
+        return BigIntegers.EMPTY;
+      } else if (info.hasDocValues()) {
+        throw new IllegalStateException("Type mismatch: " + field + " was indexed as " + info.getDocValuesType());
+      } else if (!info.isIndexed()) {
+        return BigIntegers.EMPTY;
+      }
+      return (BigIntegers) caches.get(BigInteger.class).get(reader, new CacheKey(field, parser), setDocsWithField);
+    }
+  }
+
+  static class BigIntegersFromArray extends BigIntegers {
+    private final BigInteger[] values;
+
+    public BigIntegersFromArray(BigInteger[] values) {
+      this.values = values;
+    }
+
+    @Override
+    public BigInteger get(int docID) {
+      return values[docID];
+    }
+  }
+
+  static final class BigIntegerCache extends Cache {
+    BigIntegerCache(FieldCacheImpl wrapper) {
+      super(wrapper);
+    }
+
+    @Override
+    protected Object createValue(final AtomicReader reader, CacheKey key, boolean setDocsWithField)
+        throws IOException {
+
+      final BigIntegerParser parser = (BigIntegerParser) key.custom;
+      if (parser == null) {
+        // Confusing: must delegate to wrapper (vs simply
+        // setting parser = NUMERIC_UTILS_DOUBLE_PARSER) so
+        // cache key includes NUMERIC_UTILS_DOUBLE_PARSER:
+        return wrapper.getBigIntegers(reader, key.field, NUMERIC_UTILS_BIG_INTEGER_PARSER, setDocsWithField);
+      }
+
+      final HoldsOneThing<BigInteger[]> valuesRef = new HoldsOneThing<>();
+
+      Uninvert u = new Uninvert() {
+        private BigInteger currentValue;
+        private BigInteger[] values;
+
+        @Override
+        public void visitTerm(BytesRef term) {
+          currentValue = parser.parseBigInteger(term);
+          if (values == null) {
+            // Lazy alloc so for the numeric field case
+            // (which will hit a NumberFormatException
+            // when we first try the DEFAULT_INT_PARSER),
+            // we don't double-alloc:
+            values = new BigInteger[reader.maxDoc()];
+            valuesRef.set(values);
+          }
+        }
+
+        @Override
+        public void visitDoc(int docID) {
+          values[docID] = currentValue;
+        }
+
+        @Override
+        protected TermsEnum termsEnum(Terms terms) throws IOException {
+          return parser.termsEnum(terms);
+        }
+      };
+
+      u.uninvert(reader, key.field, setDocsWithField);
+
+      if (setDocsWithField) {
+        wrapper.setDocsWithField(reader, key.field, u.docsWithField);
+      }
+      BigInteger[] values = valuesRef.get();
+      if (values == null) {
+        values = new BigInteger[reader.maxDoc()];
+      }
+      return new BigIntegersFromArray(values);
     }
   }
 
